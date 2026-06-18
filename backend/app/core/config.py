@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     EMBEDDING_DIMENSION: int = 1536
 
     # ---- Vector DB ----
-    VECTOR_DB_TYPE: str = "chromadb"
+    VECTOR_DB: str = "mock"  # mock | chroma
     CHROMA_PERSIST_DIR: str = "./chroma_data"
 
     # ---- Upload ----

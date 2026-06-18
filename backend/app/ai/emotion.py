@@ -1,42 +1,48 @@
-"""Emotion analysis service — wraps AI classify for emotion detection."""
+"""Emotion analysis service — wraps AIService for emotion detection."""
 
-import json
 import logging
 from typing import Any
-
-from app.ai.client import ai_client
-from app.ai.prompt_manager import get_emotion_prompt
 
 logger = logging.getLogger(__name__)
 
 
 class EmotionAnalyzer:
-    """Analyze user emotion from conversation text."""
+    """Analyze user emotion from conversation text.
+
+    Delegates all AI calls through AIService — never calls ai_client or AIProvider directly.
+    """
 
     EMOTIONS = ["happy", "sad", "stress", "anxiety", "angry", "confused", "neutral"]
 
     def __init__(self):
-        self._client = ai_client
+        # Lazy import to avoid circular dependency at module level
+        self._service = None
+
+    @property
+    def service(self):
+        if self._service is None:
+            from app.ai.service import ai_service
+
+            self._service = ai_service
+        return self._service
 
     async def analyze(self, conversation: str) -> dict[str, Any]:
-        """Analyze emotion from raw conversation text. Returns structured result."""
-        prompt = get_emotion_prompt(conversation=conversation)
-        try:
-            result = await self._client.generate(prompt)
-            parsed = json.loads(result)
-            emotion = parsed.get("emotion", "neutral")
-            confidence = float(parsed.get("confidence", 0.5))
-            analysis = parsed.get("analysis", "")
+        """Analyze emotion from raw conversation text.
 
+        Returns structured result with emotion, confidence, and analysis.
+        """
+        try:
+            result = await self.service.analyze_emotion(conversation)
+            emotion = result.get("emotion", "neutral")
             if emotion not in self.EMOTIONS:
                 emotion = "neutral"
             return {
                 "emotion": emotion,
-                "confidence": min(max(confidence, 0.0), 1.0),
-                "analysis": analysis,
+                "confidence": min(max(float(result.get("confidence", 0.5)), 0.0), 1.0),
+                "analysis": result.get("analysis", ""),
             }
-        except (json.JSONDecodeError, KeyError, ValueError) as exc:
-            logger.warning("Failed to parse emotion result: %s", exc)
+        except Exception as exc:
+            logger.warning("Emotion analysis failed: %s", exc)
             return {"emotion": "neutral", "confidence": 0.5, "analysis": ""}
 
     async def get_persona(self, emotion: str) -> str:

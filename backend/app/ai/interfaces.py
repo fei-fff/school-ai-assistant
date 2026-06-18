@@ -9,6 +9,9 @@ class AIProvider(ABC):
 
     To add a new model (e.g. Gemini), implement this interface
     without touching any business logic.
+
+    Default implementations of classify() and summary() delegate
+    to PromptManager so that prompts are never hardcoded here.
     """
 
     @abstractmethod
@@ -29,14 +32,27 @@ class AIProvider(ABC):
     async def classify(
         self, text: str, categories: list[str], **kwargs: Any
     ) -> dict[str, Any]:
-        """Classify text into predefined categories. Override for custom logic."""
-        prompt = f"将以下文本分类到：{', '.join(categories)}。文本：{text}"
+        """Classify text into predefined categories.
+
+        Default implementation uses PromptManager for template-driven prompts.
+        Override in provider for custom classification logic.
+        """
+        from app.ai.prompt_manager import get_classify_prompt
+
+        cat_str = "\n".join(f"- {c}" for c in categories)
+        prompt = get_classify_prompt(categories=cat_str, document=text)
         result = await self.generate(prompt, **kwargs)
         return {"primary": result.strip(), "raw": result}
 
     async def summary(self, document: str, **kwargs: Any) -> str:
-        """Summarize a document. Override for custom logic."""
-        prompt = f"请对以下文档生成简洁摘要：\n{document}"
+        """Summarize a document.
+
+        Default implementation uses PromptManager for template-driven prompts.
+        Override in provider for custom summarization logic.
+        """
+        from app.ai.prompt_manager import get_summary_prompt
+
+        prompt = get_summary_prompt(document=document)
         return await self.generate(prompt, **kwargs)
 
     @abstractmethod
