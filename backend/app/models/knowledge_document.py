@@ -43,16 +43,25 @@ class KnowledgeDocument(Base, TimestampMixin, SoftDeleteMixin):
     summary_text: Mapped[str | None] = mapped_column(
         Text, nullable=True, comment="AI 摘要"
     )
-    # Async task status fields — using string to match TaskStatus enum
+    # Lifecycle tracking
+    current_step: Mapped[str] = mapped_column(
+        String(16),
+        default="uploaded",
+        comment="当前阶段: uploaded/parsed/summarized/classified/embedded/ready/failed",
+    )
+    error_message: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="最近一次失败的错误信息"
+    )
+    # Per-stage status (backward-compatible)
     parse_status: Mapped[str] = mapped_column(
         String(16), default="waiting", comment="解析状态: waiting/processing/success/failed"
-    )
-    embedding_status: Mapped[str] = mapped_column(
-        String(16), default="waiting", comment="向量化状态"
     )
     summary_status: Mapped[str] = mapped_column(
         String(16), default="waiting", comment="摘要状态"
     )
     classify_status: Mapped[str] = mapped_column(
         String(16), default="waiting", comment="分类状态"
+    )
+    embedding_status: Mapped[str] = mapped_column(
+        String(16), default="waiting", comment="向量化状态"
     )

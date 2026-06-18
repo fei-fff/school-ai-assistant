@@ -1,5 +1,7 @@
 """Knowledge document CRUD operations."""
 
+from datetime import datetime, timezone
+
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
@@ -68,6 +70,8 @@ def update_document_status(
     db: Session,
     doc: KnowledgeDocument,
     *,
+    current_step: str | None = None,
+    error_message: str | None = None,
     parse_status: str | None = None,
     summary_status: str | None = None,
     classify_status: str | None = None,
@@ -77,7 +81,11 @@ def update_document_status(
     page_count: int | None = None,
     category_id: int | None = None,
 ) -> KnowledgeDocument:
-    """Atomically update one or more status fields and optional content."""
+    """Atomically update status fields, lifecycle step, and optional content."""
+    if current_step is not None:
+        doc.current_step = current_step
+    if error_message is not None:
+        doc.error_message = error_message
     if parse_status is not None:
         doc.parse_status = parse_status
     if summary_status is not None:
@@ -100,8 +108,6 @@ def update_document_status(
 
 
 def delete_document(db: Session, doc: KnowledgeDocument) -> None:
-    from datetime import datetime, timezone
-
     doc.is_deleted = True
     doc.delete_time = datetime.now(timezone.utc)
     db.commit()
