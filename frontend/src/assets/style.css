@@ -1,0 +1,263 @@
+/* =====================================================
+   校园智能助手 — 全局样式
+   ===================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+  color: #303133;
+  background-color: #f5f7fa;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+}
+
+a {
+  color: #409eff;
+  text-decoration: none;
+}
+
+/* ----- Landing page ----- */
+.landing-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8f0fe 0%, #d4e4fc 40%, #e3edfd 100%);
+}
+
+.landing-logo {
+  width: 100px;
+  height: 100px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #409eff, #337ecc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 20px rgba(64, 158, 255, 0.3);
+}
+
+.landing-logo-text {
+  color: #fff;
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.landing-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1d2b3a;
+  margin-bottom: 8px;
+}
+
+.landing-subtitle {
+  font-size: 15px;
+  color: #606a7a;
+  margin-bottom: 40px;
+}
+
+.landing-avatar {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6c8ce0, #4a6cf7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: 0 8px 32px rgba(74, 108, 247, 0.35);
+}
+
+.landing-avatar:hover {
+  transform: scale(1.06);
+  box-shadow: 0 12px 40px rgba(74, 108, 247, 0.5);
+}
+
+.landing-avatar-icon {
+  font-size: 56px;
+  color: #fff;
+}
+
+/* ----- Auth pages ----- */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 100%);
+}
+
+.auth-card {
+  width: 420px;
+  padding: 40px 36px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 24px rgba(0, 0, 0, 0.06);
+}
+
+.auth-card h2 {
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 8px;
+  color: #1d2b3a;
+}
+
+.auth-card .sub {
+  font-size: 13px;
+  color: #909399;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+/* ----- Main layout ----- */
+.main-layout {
+  height: 100vh;
+  display: flex;
+}
+
+.main-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #1d2b3a;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-header .logo-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #409eff, #337ecc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.sidebar-header span {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sidebar-menu {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+}
+
+.sidebar-footer {
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-user {
+  font-size: 13px;
+  color: #c0c4cc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.main-content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.main-header {
+  height: 50px;
+  border-bottom: 1px solid #e4e7ed;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+
+.main-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.main-body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* ----- Placeholder ----- */
+.placeholder-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #909399;
+}
+
+.placeholder-page .icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.placeholder-page p {
+  font-size: 14px;
+}
+
+/* ----- Responsive ----- */
+@media (max-width: 768px) {
+  .auth-card {
+    width: 90%;
+    padding: 28px 20px;
+  }
+
+  .landing-title {
+    font-size: 22px;
+  }
+
+  .main-sidebar {
+    width: 64px;
+  }
+
+  .sidebar-header span,
+  .sidebar-footer .sidebar-user {
+    display: none;
+  }
+
+  .main-body {
+    padding: 12px;
+  }
+}

@@ -1,0 +1,70 @@
+# ============================================
+# 校园智能助手 — Git 忽略规则
+# ============================================
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# ---- 环境变量 & 密钥 ----
+.env
+*.env.local
+*.env.*.local
+
+# ---- 日志 ----
+logs/
+*.log
+
+# ---- 上传文件 ----
+uploads/*
+!uploads/.gitkeep
+
+# ---- 静态文件（运行时生成） ----
+static/uploads/*
+!static/.gitkeep
+
+# ---- 向量数据库 ----
+chroma_data/
+
+# ---- IDE & 编辑器 ----
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---- 前端 ----
+node_modules/
+frontend/dist/
+.vite/
+auto-imports.d.ts
+components.d.ts
+
+# ---- 数据库 ----
+*.db
+*.sqlite3
+
+# ---- 虚拟环境 ----
+venv/
+.venv/
+env/
+.env/
+
+# ---- 测试 & 覆盖率 ----
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# ---- 临时文件 ----
+*.tmp
+*.bak
+*.orig
