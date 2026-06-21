@@ -1,0 +1,4 @@
+Red-Black Tree is a self-balancing BST.
+Insert: O(log n) time complexity.
+Delete: O(log n) time complexity.
+Used in C++ STL map, Java TreeMap, Linux CFS.
