@@ -32,8 +32,8 @@ def create_user(db: Session, data: UserRegister) -> User:
         username=data.username,
         password_hash=hash_password(data.password),
         email=data.email,
-        nickname=data.nickname or data.username,
-        role=UserRole(data.role),
+        nickname=data.username,
+        role=data.role,
     )
     db.add(user)
     db.commit()

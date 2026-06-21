@@ -1,61 +1,88 @@
 <template>
   <div class="know-page">
-    <h2>知识文档</h2>
-
-    <div v-if="loading" style="text-align: center; padding: 40px">加载中...</div>
-
-    <el-table v-else :data="documents" stripe style="width: 100%" size="medium">
-      <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
-      <el-table-column prop="file_name" label="文件名" width="160" show-overflow-tooltip />
-      <el-table-column label="阶段" width="100">
-        <template #default="{ row }">
-          <el-tag :type="stepTag(row.current_step)" size="small">{{ stepLabel(row.current_step) }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="240">
-        <template #default="{ row }">
-          <span class="status-dot" :class="statusClass(row.parse_status)" title="解析">P</span>
-          <span class="status-dot" :class="statusClass(row.summary_status)" title="摘要">S</span>
-          <span class="status-dot" :class="statusClass(row.classify_status)" title="分类">C</span>
-          <span class="status-dot" :class="statusClass(row.embedding_status)" title="向量">E</span>
-          <span style="font-size: 11px; color: #909399; margin-left: 6px">
-            P:解析 S:摘要 C:分类 E:向量
-          </span>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
-        <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="refreshStatus(row)">刷新</el-button>
-          <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <div style="margin-top: 12px; display: flex; justify-content: center">
-      <el-pagination
-        v-model:current-page="page"
-        :page-size="pageSize"
-        :total="total"
-        layout="prev, pager, next"
-        @current-change="fetchList"
-      />
+    <div class="know-header">
+      <h2>知识文档</h2>
+      <el-button type="primary" size="small" @click="fetchList" :loading="loading">刷新列表</el-button>
     </div>
+
+    <div v-if="loading" class="know-loading">
+      <el-icon class="is-loading" :size="24"><Loading /></el-icon>
+      <span>加载中...</span>
+    </div>
+
+    <div v-else-if="documents.length === 0 && !errorMsg" class="know-empty">
+      <el-icon :size="40"><FolderOpened /></el-icon>
+      <p>暂无文档</p>
+      <p class="know-empty-hint">请前往"上传资料"页面上传知识文档</p>
+    </div>
+
+    <template v-else>
+      <el-table :data="documents" stripe style="width: 100%" size="medium">
+        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="file_name" label="文件名" width="160" show-overflow-tooltip />
+        <el-table-column label="阶段" width="100">
+          <template #default="{ row }">
+            <el-tag :type="stepTag(row.current_step)" size="small">{{ stepLabel(row.current_step) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="260">
+          <template #default="{ row }">
+            <span class="status-dot" :class="statusClass(row.parse_status)" title="解析">P</span>
+            <span class="status-dot" :class="statusClass(row.summary_status)" title="摘要">S</span>
+            <span class="status-dot" :class="statusClass(row.classify_status)" title="分类">C</span>
+            <span class="status-dot" :class="statusClass(row.embedding_status)" title="向量">E</span>
+            <span style="font-size: 11px; color: #909399; margin-left: 6px">
+              P:解析 S:摘要 C:分类 E:向量
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="错误" width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.error_message" class="know-error-msg">{{ row.error_message }}</span>
+            <span v-else style="color: #c0c4cc">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="refreshStatus(row)">刷新</el-button>
+            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div style="margin-top: 12px; display: flex; justify-content: center">
+        <el-pagination
+          v-model:current-page="page"
+          :page-size="pageSize"
+          :total="total"
+          layout="prev, pager, next"
+          @current-change="fetchList"
+          small
+        />
+      </div>
+    </template>
 
     <el-alert
       v-if="errorMsg"
       :title="errorMsg"
       type="error"
       show-icon
-      :closable="false"
+      :closable="true"
+      @close="errorMsg = ''"
       style="margin-top: 12px"
-    />
+    >
+      <template #default>
+        <el-button link type="primary" size="small" @click="fetchList">重试</el-button>
+      </template>
+    </el-alert>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Loading, FolderOpened } from '@element-plus/icons-vue'
 import { listDocuments, getDocumentStatus, deleteDocument } from '@/api/knowledge'
 
 const documents = ref([])
@@ -93,13 +120,16 @@ async function refreshStatus(row) {
 
 async function handleDelete(row) {
   try {
-    await ElMessageBox.confirm(`确定删除「${row.title}」？`, '确认', { type: 'warning' })
+    await ElMessageBox.confirm(`确定删除「${row.title || row.file_name}」？`, '确认删除', {
+      type: 'warning',
+    })
   } catch {
     return
   }
   try {
     await deleteDocument(row.id)
     documents.value = documents.value.filter((d) => d.id !== row.id)
+    total.value = Math.max(0, total.value - 1)
     ElMessage.success('已删除')
   } catch {
     ElMessage.error('删除失败')
@@ -127,7 +157,17 @@ function statusClass(s) {
 
 <style scoped>
 .know-page { padding: 0 4px; }
-.know-page h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+.know-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.know-header h2 { font-size: 18px; font-weight: 600; }
+
+.know-loading { display: flex; align-items: center; gap: 8px; justify-content: center;
+  padding: 60px 0; color: #909399; }
+.know-empty { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 60px 0; color: #909399; }
+.know-empty p { margin-top: 8px; font-size: 14px; }
+.know-empty-hint { font-size: 12px !important; color: #c0c4cc; }
+
+.know-error-msg { color: #f56c6c; font-size: 12px; }
 
 .status-dot {
   display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 2px;

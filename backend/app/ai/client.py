@@ -8,15 +8,17 @@ from typing import Any
 
 from app.ai.interfaces import AIProvider
 from app.ai.provider import get_provider
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class AIClient:
-    """Facade over the active AIProvider."""
+    """Facade over the active AIProvider with separate embedding routing."""
 
     def __init__(self, provider: AIProvider | None = None):
         self._provider: AIProvider | None = provider
+        self._embedding_provider: AIProvider | None = None
 
     @property
     def provider(self) -> AIProvider:
@@ -24,31 +26,42 @@ class AIClient:
             self._provider = get_provider()
         return self._provider
 
+    @property
+    def embedding_provider(self) -> AIProvider:
+        """Returns the embedding provider based on EMBEDDING_PROVIDER setting."""
+        if self._embedding_provider is not None:
+            return self._embedding_provider
+
+        emb = settings.EMBEDDING_PROVIDER
+        if emb == "openai":
+            from app.ai.openai_embedding import OpenAIEmbeddingProvider
+            self._embedding_provider = OpenAIEmbeddingProvider()
+        else:
+            # mock or deepseek (which falls back to mock)
+            self._embedding_provider = self.provider
+
+        logger.info("Embedding provider: %s", type(self._embedding_provider).__name__)
+        return self._embedding_provider
+
     async def generate(self, prompt: str, **kwargs: Any) -> str:
         logger.info("AI generate called, prompt length=%d", len(prompt))
         result = await self.provider.generate(prompt, **kwargs)
         logger.info("AI generate completed, response length=%d", len(result))
         return result
 
-    async def chat(
-        self, messages: list[dict[str, str]], **kwargs: Any
-    ) -> str:
+    async def chat(self, messages: list[dict[str, str]], **kwargs: Any) -> str:
         logger.info("AI chat called, %d messages", len(messages))
         result = await self.provider.chat(messages, **kwargs)
         logger.info("AI chat completed, response length=%d", len(result))
         return result
 
-    async def embedding(
-        self, texts: list[str], **kwargs: Any
-    ) -> list[list[float]]:
+    async def embedding(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
         logger.info("AI embedding called, %d texts", len(texts))
-        result = await self.provider.embedding(texts, **kwargs)
+        result = await self.embedding_provider.embedding(texts, **kwargs)
         logger.info("AI embedding completed")
         return result
 
-    async def classify(
-        self, text: str, categories: list[str], **kwargs: Any
-    ) -> dict[str, Any]:
+    async def classify(self, text: str, categories: list[str], **kwargs: Any) -> dict[str, Any]:
         logger.info("AI classify called")
         return await self.provider.classify(text, categories, **kwargs)
 
@@ -57,5 +70,4 @@ class AIClient:
         return await self.provider.summary(document, **kwargs)
 
 
-# Convenience singleton — use DI in production
 ai_client = AIClient()

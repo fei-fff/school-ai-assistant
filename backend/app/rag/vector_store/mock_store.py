@@ -1,8 +1,6 @@
-"""Mock vector store — in-memory dict implementation for development.
+"""Mock vector store — in-memory dict implementation for development."""
 
-Not suitable for production but allows the full RAG pipeline to run
-without any external dependencies.
-"""
+from typing import Any
 
 from app.rag.vector_store.base import (
     Chunk,
@@ -54,3 +52,15 @@ class MockDictStore(VectorStore):
 
     async def count(self) -> int:
         return len(self._chunks)
+
+    async def get_details(self) -> dict[str, Any]:
+        chunk_ids = list(self._chunks.keys())[:10]
+        norms = [c.vector_norm() for c in list(self._chunks.values())[:5]]
+        return {
+            "backend": "mock",
+            "total_chunks": len(self._chunks),
+            "chunk_ids_sample": chunk_ids,
+            "vector_norms_sample": [round(n, 4) for n in norms],
+            "has_zero_vectors": any(n == 0.0 for n in norms),
+            "provider_type": self.__class__.__name__,
+        }

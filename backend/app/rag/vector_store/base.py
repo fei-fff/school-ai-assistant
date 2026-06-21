@@ -24,6 +24,9 @@ class Chunk:
             "metadata": self.metadata,
         }
 
+    def vector_norm(self) -> float:
+        return math.sqrt(sum(v * v for v in self.embedding))
+
 
 @dataclass
 class SearchResult:
@@ -43,14 +46,7 @@ class SearchResult:
 
 
 class VectorStore(ABC):
-    """Abstract interface for vector storage and retrieval.
-
-    Implement this interface to swap backends:
-        - MockDictStore (in-memory dict, for development)
-        - ChromaDBStore  (persistent, production-ready)
-        - MilvusStore    (distributed, large-scale)
-        - PineconeStore  (cloud-hosted)
-    """
+    """Abstract interface for vector storage and retrieval."""
 
     @abstractmethod
     async def add(self, chunks: list[Chunk]) -> int:
@@ -72,6 +68,11 @@ class VectorStore(ABC):
     @abstractmethod
     async def count(self) -> int:
         """Total number of chunks in the store."""
+        ...
+
+    @abstractmethod
+    async def get_details(self) -> dict[str, Any]:
+        """Return diagnostic info about the store state for debugging."""
         ...
 
 

@@ -8,7 +8,7 @@ from app.database.database import get_db
 from app.schemas.user import TokenResponse, UserLogin, UserOut, UserRegister
 from app.core.security import create_access_token
 from app.core.deps import get_current_user
-from app.models.user import User
+from app.models.user import User, UserStatus
 from app.utils.response import ok, created, error
 
 router = APIRouter(prefix="/auth", tags=["认证"])
@@ -32,10 +32,11 @@ def login(req: UserLogin, db: Session = Depends(get_db)):
     user = authenticate_user(db, req.username, req.password)
     if user is None:
         return error("用户名或密码错误", code=401)
-    if user.status.value == 0:
+    if user.status == UserStatus.DISABLED:
         return error("账号已被禁用", code=403)
 
-    token = create_access_token(data={"sub": user.id, "role": user.role.value})
+    # sub must be a string for python-jose
+    token = create_access_token(data={"sub": str(user.id), "role": user.role})
     return ok(
         data=TokenResponse(
             access_token=token,

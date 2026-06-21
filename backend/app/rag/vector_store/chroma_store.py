@@ -1,10 +1,4 @@
-"""ChromaDB vector store — persistent production-ready implementation.
-
-Requires: pip install chromadb
-
-Switching from MockDictStore:
-    Set VECTOR_DB=chroma in .env — no code changes needed elsewhere.
-"""
+"""ChromaDB vector store — persistent production-ready implementation."""
 
 import logging
 from typing import Any
@@ -16,11 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class ChromaDBStore(VectorStore):
-    """ChromaDB-backed vector store with persistent storage.
-
-    Stores embeddings in a ChromaDB collection. Survives restarts.
-    Supports metadata filtering and distance-based similarity scoring.
-    """
+    """ChromaDB-backed vector store with persistent storage."""
 
     def __init__(
         self,
@@ -33,10 +23,8 @@ class ChromaDBStore(VectorStore):
         self._collection = None
 
     async def _ensure_client(self):
-        """Lazy-init ChromaDB client to avoid import-time failures."""
         if self._client is not None:
             return
-
         try:
             import chromadb
         except ImportError:
@@ -44,7 +32,6 @@ class ChromaDBStore(VectorStore):
                 "chromadb is not installed. Run: pip install chromadb\n"
                 "Or switch to mock: set VECTOR_DB=mock in .env"
             )
-
         self._client = chromadb.PersistentClient(path=self._persist_dir)
         self._collection = self._client.get_or_create_collection(
             name=self._collection_name,
@@ -52,29 +39,18 @@ class ChromaDBStore(VectorStore):
         )
         logger.info(
             "ChromaDB initialized at %s, collection=%s, count=%d",
-            self._persist_dir,
-            self._collection_name,
-            self._collection.count(),
+            self._persist_dir, self._collection_name, self._collection.count(),
         )
 
     async def add(self, chunks: list[Chunk]) -> int:
         await self._ensure_client()
         if not chunks:
             return 0
-
         ids = [c.id for c in chunks]
         embeddings = [c.embedding for c in chunks]
         documents = [c.content for c in chunks]
-        metadatas = [
-            {**c.metadata, "document_id": c.document_id} for c in chunks
-        ]
-
-        self._collection.add(
-            ids=ids,
-            embeddings=embeddings,
-            documents=documents,
-            metadatas=metadatas,
-        )
+        metadatas = [{**c.metadata, "document_id": c.document_id} for c in chunks]
+        self._collection.add(ids=ids, embeddings=embeddings, documents=documents, metadatas=metadatas)
         logger.info("ChromaDB added %d chunks", len(chunks))
         return len(chunks)
 
@@ -84,22 +60,16 @@ class ChromaDBStore(VectorStore):
         await self._ensure_client()
         if self._collection is None or self._collection.count() == 0:
             return []
-
         chroma_results = self._collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
+            query_embeddings=[query_embedding], n_results=top_k,
             include=["embeddings", "documents", "metadatas", "distances"],
         )
-
         results: list[SearchResult] = []
         if not chroma_results["ids"] or not chroma_results["ids"][0]:
             return results
-
         for i, chunk_id in enumerate(chroma_results["ids"][0]):
             distance = chroma_results["distances"][0][i]
-            # ChromaDB returns cosine distance; convert to similarity: 1 - distance
             score = 1.0 - distance
-
             chunk = Chunk(
                 id=chunk_id,
                 document_id=chroma_results["metadatas"][0][i].get("document_id", 0),
@@ -108,7 +78,6 @@ class ChromaDBStore(VectorStore):
                 metadata=chroma_results["metadatas"][0][i],
             )
             results.append(SearchResult(chunk=chunk, score=score))
-
         results.sort(key=lambda r: r.score, reverse=True)
         return results[:top_k]
 
@@ -116,15 +85,9 @@ class ChromaDBStore(VectorStore):
         await self._ensure_client()
         if self._collection is None:
             return 0
-
-        # Query chunks by document_id metadata filter
-        existing = self._collection.get(
-            where={"document_id": document_id},
-            include=["metadatas"],
-        )
+        existing = self._collection.get(where={"document_id": document_id}, include=["metadatas"])
         if not existing["ids"]:
             return 0
-
         self._collection.delete(ids=existing["ids"])
         deleted = len(existing["ids"])
         logger.info("ChromaDB deleted %d chunks for document_id=%d", deleted, document_id)
@@ -135,3 +98,14 @@ class ChromaDBStore(VectorStore):
         if self._collection is None:
             return 0
         return self._collection.count()
+
+    async def get_details(self) -> dict[str, Any]:
+        await self._ensure_client()
+        c = self._collection.count() if self._collection else 0
+        return {
+            "backend": "chroma",
+            "total_chunks": c,
+            "collection_name": self._collection_name,
+            "persist_dir": self._persist_dir,
+            "provider_type": self.__class__.__name__,
+        }

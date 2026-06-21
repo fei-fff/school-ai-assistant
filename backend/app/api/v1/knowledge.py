@@ -1,15 +1,4 @@
-"""Knowledge API — upload, process, query, and category management.
-
-Endpoints:
-    POST   /knowledge/upload            — upload a document file
-    POST   /knowledge/process/{doc_id}  — trigger full processing pipeline
-    POST   /knowledge/query             — RAG knowledge Q&A
-    GET    /knowledge/categories        — list categories (backward-compat)
-    POST   /knowledge/categories        — create category (admin)
-    GET    /knowledge/categories/{id}   — get category detail
-    PUT    /knowledge/categories/{id}   — update category (admin)
-    DELETE /knowledge/categories/{id}   — delete category (admin)
-"""
+"""Knowledge API — upload, process, query, and category management."""
 
 import asyncio
 import os
@@ -55,10 +44,8 @@ from app.rag.retrieval import knowledge_qa
 
 router = APIRouter(prefix="/knowledge", tags=["知识库"])
 
-# ================================================================
-#  Document endpoints
-# ================================================================
 
+# ================================================================
 @router.post("/upload", summary="上传知识文档")
 async def upload_document(
     file: UploadFile = File(...),
@@ -67,17 +54,10 @@ async def upload_document(
     db: Session = Depends(get_db),
     current_user: User = Depends(teacher_required),
 ):
-    """Upload a document to the knowledge base.
-
-    教师可上传；文件保存至 UPLOAD_DIR。
-    返回创建的 KnowledgeDocument 记录（所有状态初始为 waiting）。
-    """
     allowed = [t.strip() for t in settings.ALLOWED_UPLOAD_TYPES.split(",")]
     ext = Path(file.filename or "unknown").suffix.lower().lstrip(".")
     if ext not in allowed:
-        return error(
-            f"不支持的文件类型: .{ext}，允许: {', '.join(allowed)}", code=400
-        )
+        return error(f"不支持的文件类型: .{ext}，允许: {', '.join(allowed)}", code=400)
 
     upload_dir = Path(settings.UPLOAD_DIR)
     upload_dir.mkdir(parents=True, exist_ok=True)
@@ -120,29 +100,14 @@ async def process_document(
     db: Session = Depends(get_db),
     current_user: User = Depends(teacher_required),
 ):
-    """Run the full RAG pipeline on an uploaded document.
-
-    Stages: parser -> summary -> classification -> embedding
-    同步执行，所有阶段完成后返回结果。
-    """
+    """Run the full RAG pipeline on an uploaded document."""
     cat_list = None
     if categories:
         cat_list = [c.strip() for c in categories.split(",") if c.strip()]
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        result = loop.run_until_complete(
-            run_pipeline(
-                doc_id,
-                db,
-                categories=cat_list,
-                skip_classification=skip_classification,
-            )
-        )
-    finally:
-        loop.close()
-
+    result = await run_pipeline(
+        doc_id, db, categories=cat_list, skip_classification=skip_classification,
+    )
     return ok(data=result, message="流水线执行完成")
 
 
@@ -153,19 +118,8 @@ async def process_single_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(teacher_required),
 ):
-    """Run a single pipeline stage for retries.
-
-    task_name: parser / summary / classify / embedding
-    """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        result = loop.run_until_complete(
-            run_single_task(doc_id, db, task_name)
-        )
-    finally:
-        loop.close()
-
+    """Run a single pipeline stage for retries."""
+    result = await run_single_task(doc_id, db, task_name)
     if "error" in result:
         return error(result["error"], code=400)
     return ok(data=result, message=f"任务 {task_name} 执行完成")
@@ -175,43 +129,23 @@ async def process_single_task(
 async def query_knowledge(
     question: str = Query(..., description="用户问题"),
     top_k: int = Query(5, ge=1, le=20, description="检索片段数"),
-    similarity_threshold: float = Query(
-        0.3, ge=0.0, le=1.0, description="最低相似度阈值"
-    ),
+    similarity_threshold: float = Query(0.3, ge=0.0, le=1.0, description="最低相似度阈值"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Ask a question and get an answer grounded in the knowledge base.
-
-    流程: query -> embed -> vector search -> context -> AI generate -> result
-
-    返回:
-        answer          — AI 生成的回答
-        sources         — 引用来源列表
-        scores          — 各来源相似度分数
-        context_used    — 输入 LLM 的上下文
-        chunk_count     — 检索到的片段数
-        retrieval_trace — 检索追溯信息
-    """
     ready = await knowledge_qa.is_ready()
     if not ready:
         return ok(
             data={
-                "answer": "知识库尚未初始化，请先上传并处理文档（/knowledge/upload + /knowledge/process/{id}）。",
-                "sources": [],
-                "scores": [],
-                "context_used": "",
-                "chunk_count": 0,
+                "answer": "知识库尚未初始化，请先上传并处理文档。",
+                "sources": [], "scores": [], "context_used": "", "chunk_count": 0,
             },
             message="向量库为空",
         )
 
     result = await knowledge_qa.ask(
-        query=question,
-        top_k=top_k,
-        similarity_threshold=similarity_threshold,
+        query=question, top_k=top_k, similarity_threshold=similarity_threshold,
     )
-
     return ok(data=result)
 
 
@@ -223,31 +157,18 @@ def list_my_documents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List knowledge documents. Teachers see own; admins see all."""
     uploader_id = None if current_user.role == UserRole.ADMIN else current_user.id
-    items, total = list_documents(
-        db,
-        uploader_id=uploader_id,
-        category_id=category_id,
-        page=page,
-        page_size=page_size,
-    )
-    return ok(
-        data=PaginatedData(
-            items=[KnowledgeDocumentOut.model_validate(i) for i in items],
-            total=total,
-            page=page,
-            page_size=page_size,
-        ).model_dump()
-    )
+    items, total = list_documents(db, uploader_id=uploader_id, category_id=category_id,
+                                   page=page, page_size=page_size)
+    return ok(data=PaginatedData(
+        items=[KnowledgeDocumentOut.model_validate(i) for i in items],
+        total=total, page=page, page_size=page_size,
+    ).model_dump())
 
 
 @router.get("/documents/{doc_id}", summary="文档详情")
-def get_document_detail(
-    doc_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def get_document_detail(doc_id: int, db: Session = Depends(get_db),
+                        current_user: User = Depends(get_current_user)):
     doc = get_document_by_id(db, doc_id)
     if doc is None:
         raise NotFoundError("文档不存在")
@@ -255,12 +176,8 @@ def get_document_detail(
 
 
 @router.get("/documents/{doc_id}/status", summary="获取处理状态")
-def get_document_status(
-    doc_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Lightweight endpoint for polling processing progress."""
+def get_document_status(doc_id: int, db: Session = Depends(get_db),
+                         current_user: User = Depends(get_current_user)):
     doc = get_document_by_id(db, doc_id)
     if doc is None:
         raise NotFoundError("文档不存在")
@@ -268,11 +185,8 @@ def get_document_status(
 
 
 @router.delete("/documents/{doc_id}", summary="删除文档")
-def delete_doc(
-    doc_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def delete_doc(doc_id: int, db: Session = Depends(get_db),
+               current_user: User = Depends(get_current_user)):
     doc = get_document_by_id(db, doc_id)
     if doc is None:
         raise NotFoundError("文档不存在")
@@ -283,7 +197,7 @@ def delete_doc(
 
 
 # ================================================================
-#  Category management endpoints (backward-compatible)
+#  Category management (backward-compatible)
 # ================================================================
 
 category_router = APIRouter(prefix="/categories", tags=["知识分类"])
@@ -291,31 +205,21 @@ category_router = APIRouter(prefix="/categories", tags=["知识分类"])
 
 @category_router.get("", summary="知识分类列表")
 def get_categories(
-    parent_id: int | None = Query(None, description="父分类 ID，null=顶层"),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(100, ge=1, le=500),
+    parent_id: int | None = Query(None),
+    page: int = Query(1, ge=1), page_size: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    items, total = list_categories(
-        db, parent_id=parent_id, page=page, page_size=page_size
-    )
-    return ok(
-        data=PaginatedData(
-            items=[KnowledgeCategoryOut.model_validate(i) for i in items],
-            total=total,
-            page=page,
-            page_size=page_size,
-        ).model_dump()
-    )
+    items, total = list_categories(db, parent_id=parent_id, page=page, page_size=page_size)
+    return ok(data=PaginatedData(
+        items=[KnowledgeCategoryOut.model_validate(i) for i in items],
+        total=total, page=page, page_size=page_size,
+    ).model_dump())
 
 
 @category_router.get("/{category_id}", summary="分类详情")
-def get_category_detail(
-    category_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def get_category_detail(category_id: int, db: Session = Depends(get_db),
+                         current_user: User = Depends(get_current_user)):
     cat = get_category_by_id(db, category_id)
     if cat is None:
         raise NotFoundError("分类不存在")
@@ -323,22 +227,16 @@ def get_category_detail(
 
 
 @category_router.post("", summary="创建分类（管理员）")
-def create_category_endpoint(
-    req: KnowledgeCategoryCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(admin_required),
-):
+def create_category_endpoint(req: KnowledgeCategoryCreate, db: Session = Depends(get_db),
+                               current_user: User = Depends(admin_required)):
     cat = create_category(db, req)
     return ok(data=KnowledgeCategoryOut.model_validate(cat), message="分类创建成功")
 
 
 @category_router.put("/{category_id}", summary="更新分类（管理员）")
-def update_category_endpoint(
-    category_id: int,
-    req: KnowledgeCategoryUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(admin_required),
-):
+def update_category_endpoint(category_id: int, req: KnowledgeCategoryUpdate,
+                               db: Session = Depends(get_db),
+                               current_user: User = Depends(admin_required)):
     cat = get_category_by_id(db, category_id)
     if cat is None:
         raise NotFoundError("分类不存在")
@@ -347,11 +245,8 @@ def update_category_endpoint(
 
 
 @category_router.delete("/{category_id}", summary="删除分类（管理员）")
-def delete_category_endpoint(
-    category_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(admin_required),
-):
+def delete_category_endpoint(category_id: int, db: Session = Depends(get_db),
+                               current_user: User = Depends(admin_required)):
     cat = get_category_by_id(db, category_id)
     if cat is None:
         raise NotFoundError("分类不存在")

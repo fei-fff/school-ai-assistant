@@ -21,19 +21,19 @@ def get_provider(name: str | None = None) -> AIProvider:
 
     if name == "mock":
         from app.ai.mock_provider import MockProvider
-
         return MockProvider()
+
+    if name == "deepseek":
+        from app.ai.deepseek_provider import DeepSeekProvider
+        return DeepSeekProvider()
 
     cls = _registry.get(name)
     if cls is None:
-        logger.warning(
-            "Provider '%s' not registered, falling back to mock", name
-        )
+        logger.warning("Provider '%s' not registered, falling back to mock", name)
         from app.ai.mock_provider import MockProvider
-
         return MockProvider()
     return cls()
 
 
 def list_providers() -> list[str]:
-    return ["mock"] + list(_registry.keys())
+    return ["mock", "deepseek"] + list(_registry.keys())

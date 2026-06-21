@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token
 from app.database.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, UserStatus
 
 security_scheme = HTTPBearer()
 
@@ -15,10 +15,7 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    """Validate token and return the authenticated user.
-
-    Raises 401 if token is missing, invalid, or user does not exist.
-    """
+    """Validate token and return the authenticated user."""
     payload = decode_access_token(credentials.credentials)
     if payload is None:
         raise HTTPException(
@@ -26,20 +23,21 @@ def get_current_user(
             detail="Token 无效或已过期",
         )
 
-    user_id: int | None = payload.get("sub")
-    if user_id is None:
+    user_id_str = payload.get("sub")
+    if user_id_str is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token 载荷无效",
         )
 
+    user_id = int(user_id_str)
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户不存在",
         )
-    if user.status.value == 0:
+    if user.status == UserStatus.DISABLED:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="账号已被禁用",

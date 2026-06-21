@@ -12,4 +12,4 @@
 {mentor_list}
 
 请返回 JSON 格式的结果：
-[{"mentor_id": 1, "name": "导师名", "score": 0.95, "reason": "推荐理由"}, ...]
+[{{"mentor_id": 1, "name": "导师名", "score": 0.95, "reason": "推荐理由"}}, ...]

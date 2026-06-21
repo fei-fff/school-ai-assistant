@@ -12,4 +12,4 @@
 {document}
 
 请返回 JSON 格式：
-{"primary_category": "主分类", "categories": [{"name": "分类1", "confidence": 0.95}, ...]}
+{{"primary_category": "主分类", "categories": [{{"name": "分类1", "confidence": 0.95}}, ...]}}
