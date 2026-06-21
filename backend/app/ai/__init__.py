@@ -1,14 +1,13 @@
-"""AI module — public API surface.
+"""AI module — public API.
 
-Business code should import from here or from app.ai.service:
-
-    from app.ai.service import ai_service          # preferred
-    from app.ai import ai_service, AIService       # also works
-
-Internal modules (client, provider, interfaces, prompt_manager)
-should NOT be imported directly by business-layer code.
+Import from here:
+    from app.ai.service import ai_service, AIService
+    from app.ai.base import BaseAIProvider
+    from app.ai.factory import ProviderFactory
 """
 
 from app.ai.service import AIService, ai_service
+from app.ai.base import BaseAIProvider
+from app.ai.factory import ProviderFactory
 
-__all__ = ["AIService", "ai_service"]
+__all__ = ["AIService", "ai_service", "BaseAIProvider", "ProviderFactory"]

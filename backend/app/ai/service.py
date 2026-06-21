@@ -1,144 +1,66 @@
-"""AIService — the single entry-point for all AI capabilities in the system.
+"""AIService — the single entry-point for all AI capabilities.
 
-All business-layer code MUST call AIService instead of importing AIClient or AIProvider directly.
+All business code MUST import from here.
+AIService is a thin wrapper that delegates to the configured BaseAIProvider.
+No business logic, no prompt building, no JSON parsing — pure delegation.
 """
 
-import json
 import logging
 from typing import Any
 
-from app.ai.client import AIClient, ai_client
-from app.ai.prompt_manager import (
-    get_classify_prompt,
-    get_emotion_prompt,
-    get_knowledge_prompt,
-    get_mentor_prompt,
-    get_summary_prompt,
-)
-from app.utils.exceptions import AIException
+from app.ai.base import BaseAIProvider
+from app.ai.factory import ProviderFactory
 
 logger = logging.getLogger(__name__)
 
 
 class AIService:
-    """Unified AI service — wraps all AI calls with prompt management and error handling."""
+    """Thin wrapper over a BaseAIProvider — the ONLY import for business code.
 
-    def __init__(self, client: AIClient | None = None):
-        self._client = client or ai_client
+    Usage:
+        from app.ai.service import ai_service
+        vectors = await ai_service.embed(["hello world"])
+        reply   = await ai_service.chat([{"role": "user", "content": "hi"}])
+        summary = await ai_service.summarize("long text...")
+        labels  = await ai_service.classify("text", ["cat1", "cat2"])
+    """
 
-    async def chat(
-        self, messages: list[dict[str, str]], *, system_prompt: str | None = None,
-        temperature: float | None = None, max_tokens: int | None = None,
-    ) -> str:
-        full_messages = list(messages)
-        if system_prompt:
-            full_messages.insert(0, {"role": "system", "content": system_prompt})
-        kwargs: dict[str, Any] = {}
-        if temperature is not None:
-            kwargs["temperature"] = temperature
-        if max_tokens is not None:
-            kwargs["max_tokens"] = max_tokens
-        try:
-            return await self._client.chat(full_messages, **kwargs)
-        except Exception as exc:
-            logger.error("AIService.chat failed: %s", exc)
-            raise AIException(f"AI 对话失败: {exc}") from exc
+    def __init__(self, provider: BaseAIProvider | None = None):
+        self._provider = provider
 
-    async def knowledge_chat(
-        self, question: str, context: str, *, history: list[dict[str, str]] | None = None,
-    ) -> str:
+    @property
+    def provider(self) -> BaseAIProvider:
+        if self._provider is None:
+            self._provider = ProviderFactory.create()
+        return self._provider
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        return await self.provider.embed(texts)
+
+    async def chat(self, messages: list[dict[str, str]], **kwargs: Any) -> str:
+        return await self.provider.chat(messages, **kwargs)
+
+    async def summarize(self, text: str) -> str:
+        return await self.provider.summarize(text)
+
+    async def classify(self, text: str, categories: list[str]) -> dict[str, Any]:
+        return await self.provider.classify(text, categories)
+
+    async def generate(self, prompt: str, **kwargs: Any) -> str:
+        return await self.provider.generate(prompt, **kwargs)
+
+    async def knowledge_chat(self, question: str, context: str, *,
+                             history: list[dict[str, str]] | None = None) -> str:
+        """RAG knowledge Q&A — build prompt then delegate to chat."""
+        from app.ai.prompt_manager import get_knowledge_prompt
         prompt = get_knowledge_prompt(context=context, question=question)
         messages = history or []
         messages.append({"role": "user", "content": prompt})
-        try:
-            return await self._client.chat(messages)
-        except Exception as exc:
-            logger.error("AIService.knowledge_chat failed: %s", exc)
-            raise AIException(f"知识库问答失败: {exc}") from exc
-
-    async def summarize(self, document: str, *, max_length: int | None = None) -> str:
-        prompt = get_summary_prompt(document=document)
-        try:
-            return await self._client.generate(prompt)
-        except Exception as exc:
-            logger.error("AIService.summarize failed: %s", exc)
-            raise AIException(f"摘要生成失败: {exc}") from exc
-
-    async def classify(self, text: str, categories: list[str]) -> dict[str, Any]:
-        """Classify text into predefined categories. Always returns a dict."""
-        cat_str = "\n".join(f"- {c}" for c in categories)
-        prompt = get_classify_prompt(categories=cat_str, document=text)
-        try:
-            result = await self._client.generate(prompt)
-            parsed = self._parse_json_result(result)
-            # Ensure we always return a dict
-            if not isinstance(parsed, dict):
-                return {"primary": str(parsed), "categories": []}
-            return parsed
-        except Exception as exc:
-            logger.error("AIService.classify failed: %s", exc)
-            raise AIException(f"分类失败: {exc}") from exc
-
-    async def analyze_emotion(self, conversation: str) -> dict[str, Any]:
-        prompt = get_emotion_prompt(conversation=conversation)
-        try:
-            result = await self._client.generate(prompt)
-            parsed = self._parse_json_result(result)
-            if not isinstance(parsed, dict):
-                return {"emotion": "neutral", "confidence": 0.5, "analysis": ""}
-            return parsed
-        except Exception as exc:
-            logger.error("AIService.analyze_emotion failed: %s", exc)
-            raise AIException(f"情绪分析失败: {exc}") from exc
-
-    async def match_mentors(self, student_info: str, mentor_list: str) -> list[dict[str, Any]]:
-        prompt = get_mentor_prompt(student_info=student_info, mentor_list=mentor_list)
-        try:
-            result = await self._client.generate(prompt)
-            parsed = self._parse_json_result(result)
-            if isinstance(parsed, list):
-                return parsed
-            return [parsed] if isinstance(parsed, dict) else []
-        except Exception as exc:
-            logger.error("AIService.match_mentors failed: %s", exc)
-            raise AIException(f"导师匹配失败: {exc}") from exc
-
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        try:
-            return await self._client.embedding(texts)
-        except Exception as exc:
-            logger.error("AIService.embed failed: %s", exc)
-            raise AIException(f"向量化失败: {exc}") from exc
-
-    async def generate(self, prompt: str, *, temperature: float | None = None,
-                       max_tokens: int | None = None) -> str:
-        kwargs: dict[str, Any] = {}
-        if temperature is not None:
-            kwargs["temperature"] = temperature
-        if max_tokens is not None:
-            kwargs["max_tokens"] = max_tokens
-        try:
-            return await self._client.generate(prompt, **kwargs)
-        except Exception as exc:
-            logger.error("AIService.generate failed: %s", exc)
-            raise AIException(f"AI 生成失败: {exc}") from exc
+        return await self.chat(messages)
 
     def is_available(self) -> bool:
-        return self._client.provider.is_available()
-
-    @staticmethod
-    def _parse_json_result(raw: str) -> Any:
-        """Parse AI response as JSON with markdown fence stripping."""
-        raw = raw.strip()
-        if raw.startswith("```"):
-            lines = raw.split("\n")
-            inner = lines[1:] if not lines[-1].strip().startswith("```") else lines[1:-1]
-            raw = "\n".join(inner)
-        try:
-            return json.loads(raw)
-        except (json.JSONDecodeError, ValueError):
-            logger.warning("Failed to parse JSON from AI response: %s", raw[:200])
-            return raw
+        return self.provider.is_available()
 
 
+# Module-level singleton
 ai_service = AIService()
