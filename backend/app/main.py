@@ -8,12 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
 from app.core.config import settings
-from app.database.database import SessionLocal
+from app.database.database import SessionLocal, engine, Base
+from app.models import *  # noqa: ensure all models imported
 from app.crud.seed_colleges import seed
 from app.middleware.exceptions import (
-    app_exception_handler,
-    generic_exception_handler,
-    validation_exception_handler,
+    app_exception_handler, generic_exception_handler, validation_exception_handler,
 )
 from app.routers import api_router
 from app.utils.exceptions import AppException
@@ -26,6 +25,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("%s v%s starting", settings.APP_NAME, settings.APP_VERSION)
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         n = seed(db)
