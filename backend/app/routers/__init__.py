@@ -9,6 +9,7 @@ from app.api.v1.knowledge import router as knowledge_router
 from app.api.v1.documents import router as documents_router
 from app.api.v1.qa import router as qa_router
 from app.api.v1.emotion_chat import router as emotion_router
+from app.api.v1.mentor import router as mentor_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_router)
@@ -18,3 +19,4 @@ api_router.include_router(knowledge_router)
 api_router.include_router(documents_router)
 api_router.include_router(qa_router)
 api_router.include_router(emotion_router)
+api_router.include_router(mentor_router)
