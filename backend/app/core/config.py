@@ -1,17 +1,16 @@
-"""Application configuration loaded from environment variables."""
+"""Unified application configuration — single source of truth."""
 
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "校园智能助手"
+    APP_NAME: str = "Campus AI Assistant"
     APP_VERSION: str = "2.0.0"
     DEBUG: bool = True
     RAG_DEBUG: bool = False
-    RAG_MIN_THRESHOLD: float = 0.0  # 0 = use provider default, >0 = override
 
     DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/campus_assistant?charset=utf8mb4"
-    SECRET_KEY: str = "change-me-to-a-random-secret-key"
+    SECRET_KEY: str = "change-me"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
@@ -36,9 +35,17 @@ class Settings(BaseSettings):
     EMBEDDING_PROVIDER: str = "mock"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     EMBEDDING_DIMENSION: int = 1536
+    EMBEDDING_CHUNK_SIZE: int = 1500
+    EMBEDDING_CHUNK_OVERLAP: int = 200
+
+    PARSER_MAX_CONTENT_LENGTH: int = 32000
+
+    RAG_TOP_K: int = 5
+    RAG_THRESHOLD: float = 0.15
 
     VECTOR_DB: str = "mock"
     CHROMA_PERSIST_DIR: str = "./chroma_data"
+    CHROMA_COLLECTION_NAME: str = "campus_knowledge"
 
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE_MB: int = 50
