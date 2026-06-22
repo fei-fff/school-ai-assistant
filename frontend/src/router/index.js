@@ -8,11 +8,11 @@ const routes = [
   // Student
   { path: '/student', component: () => import('@/layouts/MainLayout.vue'), meta: { requiredRole: 'student' }, children: [
     { path: 'home', name: 'StudentHome', component: () => import('@/views/student/StudentHome.vue') },
-    { path: 'chat', name: 'StudentChat', component: () => import('@/views/PlaceholderPage.vue') },
+    { path: 'chat', name: 'StudentChat', component: () => import('@/views/chat/UnifiedChatPage.vue') },
     { path: 'knowledge', name: 'StudentKnowledge', component: () => import('@/views/knowledge/QAQueryPage.vue') },
     { path: 'colleges', name: 'StudentColleges', component: () => import('@/views/mentor/CollegeListPage.vue') },
     { path: 'mentors/:collegeId', name: 'StudentMentors', component: () => import('@/views/mentor/MentorListPage.vue') },
-    { path: 'mentor/:id', name: 'StudentMentorDetail', component: () => import('@/views/mentor/MentorDetailPage.vue'), meta: { title: 'Mentor Detail' } },
+    { path: 'mentor/:id', name: 'StudentMentorDetail', component: () => import('@/views/mentor/MentorDetailPage.vue') },
     { path: 'chat-history', name: 'StudentChatHistory', component: () => import('@/views/PlaceholderPage.vue') },
     { path: 'profile', name: 'StudentProfile', component: () => import('@/views/PlaceholderPage.vue') },
   ]},
@@ -20,6 +20,7 @@ const routes = [
   // Teacher
   { path: '/teacher', component: () => import('@/layouts/MainLayout.vue'), meta: { requiredRole: 'teacher' }, children: [
     { path: 'home', name: 'TeacherHome', component: () => import('@/views/teacher/TeacherHome.vue') },
+    { path: 'chat', name: 'TeacherChat', component: () => import('@/views/chat/UnifiedChatPage.vue') },
     { path: 'card', name: 'TeacherCard', component: () => import('@/views/mentor/TeacherCardPage.vue') },
     { path: 'knowledge', name: 'TeacherKnowledge', component: () => import('@/views/knowledge/DocumentListPage.vue') },
     { path: 'upload', name: 'TeacherUpload', component: () => import('@/views/knowledge/DocumentUploadPage.vue') },
@@ -42,13 +43,13 @@ const routes = [
 const router = createRouter({ history: createWebHistory(), routes })
 
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('access_token')
-  const userInfo = JSON.parse(localStorage.getItem('user_info') || 'null')
+  const t = localStorage.getItem('access_token')
+  const u = JSON.parse(localStorage.getItem('user_info') || 'null')
   if (to.meta.requiredRole) {
-    if (!token || !userInfo) return next('/login')
-    if (userInfo.role !== to.meta.requiredRole) return next(`/${userInfo.role}/home`)
+    if (!t || !u) return next('/login')
+    if (u.role !== to.meta.requiredRole) return next(`/${u.role}/home`)
   }
-  if (to.name === 'Login' && token && userInfo) return next(`/${userInfo.role}/home`)
+  if (to.name === 'Login' && t && u) return next(`/${u.role}/home`)
   next()
 })
 
