@@ -22,7 +22,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotRound, Collection, User, Management, Postcard, Setting, Grid, Menu, Upload, School } from '@element-plus/icons-vue'
+import { ChatDotRound, Collection, User, Postcard, Upload, School } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 
 const route = useRoute(); const router = useRouter(); const userStore = useUserStore()
@@ -38,27 +38,25 @@ const menuItems = computed(() => ({
   student: [
     { path: '/student/home', label: '首页', icon: 'Menu' },
     { path: '/student/chat', label: 'AI 聊天', icon: 'ChatDotRound' },
-    { path: '/student/knowledge', label: '知识库问答', icon: 'Collection' },
-    { path: '/student/colleges', label: '导师查询', icon: 'School' },
-    { path: '/student/profile', label: '个人中心', icon: 'User' },
+    { path: '/student/knowledge', label: '知识库', icon: 'Collection' },
+    { path: '/student/colleges', label: '导师推荐', icon: 'School' },
+    { path: '/student/profile', label: '我的画像', icon: 'User' },
   ],
   teacher: [
     { path: '/teacher/home', label: '首页', icon: 'Menu' },
     { path: '/teacher/chat', label: 'AI 聊天', icon: 'ChatDotRound' },
-    { path: '/teacher/knowledge', label: '知识库管理', icon: 'Collection' },
-    { path: '/teacher/upload', label: '上传资料', icon: 'Upload' },
-    { path: '/teacher/card', label: '我的名片', icon: 'Postcard' },
-    { path: '/teacher/profile', label: '个人中心', icon: 'User' },
+    { path: '/teacher/knowledge', label: '知识库', icon: 'Collection' },
+    { path: '/teacher/upload', label: '上传', icon: 'Upload' },
+    { path: '/teacher/card', label: '名片', icon: 'Postcard' },
+    { path: '/teacher/profile', label: '画像', icon: 'User' },
   ],
   admin: [
     { path: '/admin/home', label: '首页', icon: 'Menu' },
-    { path: '/admin/users', label: '用户管理', icon: 'Management' },
-    { path: '/admin/colleges', label: '学院管理', icon: 'School' },
-    { path: '/admin/teachers', label: '导师管理', icon: 'Postcard' },
-    { path: '/admin/knowledge', label: '知识库管理', icon: 'Collection' },
-    { path: '/admin/categories', label: '分类管理', icon: 'Grid' },
-    { path: '/admin/logs', label: '系统日志', icon: 'Document' },
-    { path: '/admin/settings', label: '系统设置', icon: 'Setting' },
+    { path: '/admin/users', label: '用户', icon: 'User' },
+    { path: '/admin/colleges', label: '学院', icon: 'School' },
+    { path: '/admin/teachers', label: '导师', icon: 'Postcard' },
+    { path: '/admin/knowledge', label: '知识库', icon: 'Collection' },
+    { path: '/admin/settings', label: '设置', icon: 'Setting' },
   ],
 }[role.value] || []))
 
