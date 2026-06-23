@@ -1,0 +1,1 @@
+Red-Black Tree time complexity is O(log n). Insertion and deletion are both O(log n).
